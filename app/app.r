@@ -200,8 +200,8 @@ server <- function(input, output, session){
   # Pre-run parameters if turbot is selected
   # Default disabled inputs
   shinyjs::disable('uploadedDataset')
-  shinyjs::disable('input.polydegree')
-  shinyjs::disable('input.knots')
+  # shinyjs::disable('input.poly.degree')
+  # shinyjs::disable('input.knots')
   # Disable "next" buttons unless that step's action button has been pushed
   shinyjs::disable("next_tab1")
   shinyjs::disable("next_tab2")
@@ -268,7 +268,7 @@ server <- function(input, output, session){
             'Linear model with slope=0, resampled from P/B' = 'avg'
         ), selected='poly')
       })
-      output$input.polydegree <- renderUI({
+      output$input.poly.degree <- renderUI({
         numericInput('polydegree', 'Degree of the polynomial', min=1, value=1, step=1)
       })
       output$input.knots <- renderUI({
@@ -406,8 +406,8 @@ server <- function(input, output, session){
       output$input.E.var.inc <- renderUI({
         numericInput('E.var.inc', 'The change in the variance of the E distribution for a future climate scenario (scalar, 1 for as is, <1 decreases variance)', min=0, step=1, value=params$E.var.inc)
       })
-      output$input.polydegree <- renderUI({
-        numericInput('poly.degree', 'Degree of the polynomial', min=1, value=1, step=params$poly.degree)
+      output$input.poly.degree <- renderUI({
+        numericInput('polydegree', 'Degree of the polynomial', min=1, value=params$poly.degree, step=1)
       })
       output$input.knots <- renderUI({
         numericInput('knots', 'Number of knots for the adaptive GAM', min=1, value=params$knots, step=1)
@@ -510,14 +510,18 @@ server <- function(input, output, session){
   
   ### Reactive ui - not related to default dataset
   # STEP 1
-  observeEvent(input$modtype, {
-    if(input$modtype!='poly'){
-      shinyjs::enable('input.polydegree')
-    }
-    if(input$modtype=='gam.adaptive'){
-      shinyjs::enable('input.knots')
-    }
-  })
+###  observeEvent(input$modtype, {
+###    if(input$modtype=='poly'){
+###      shinyjs::enable('input.poly.degree')
+###    } else {
+###      shinyjs::disable('input.poly.degree')
+###    }
+###    if(input$modtype=='gam.adaptive'){
+###      shinyjs::enable('input.knots')
+###    } else {
+###      shinyjs::disable('input.knots')
+###    }
+###  })
 
   # REACTIONS/ACTIONS
   # STEP 1:
@@ -528,7 +532,7 @@ server <- function(input, output, session){
     PB <<- ccca::PB.f(dataset=dataset(), ref.years=seq(input$refyear.slider[1], input$refyear.slider[2]), q=input$q)
       # ccca::colramp.legend(col1="red", col2="blue", ncol=length(PB$E), 2.5, 3.5, 2.7, 4.5)
     PvsE <<- ccca::PBE.fit.f(PB, model.type=input$modtype, poly.degree=input$polydegree, knots=input$knots)
-    PvsE.null <<- ccca::PBE.fit.f(PB, model.type="avg", knots=input$knots, poly.degree=input$poly.degree)
+    PvsE.null <<- ccca::PBE.fit.f(PB, model.type="avg", knots=input$knots, poly.degree=input$polydegree)
     output$timeSeries <- renderPlot({
       matplot(dataset()$Year, cbind(dataset()$Index, dataset()$Catch),type="l",lty=c(1,1),lwd=2,xlab="Year",ylab="Survey biomass and catch",col=c("black","green"))
       yaxis2.f(dataset()$Year, dataset()$E,ylabel=expression('Env. variable [often temperature ('^o*C*')]'),type="l",cex=1.1,lwd=2,lty=1,col="red")
