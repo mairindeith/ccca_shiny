@@ -253,7 +253,7 @@ server <- function(input, output, session){
       })
 
       output$input.modtype <- renderUI({
-        selectInput('modtype', '!!! NOT YET IMPLEMENTED!!! Form of the model', 
+        selectInput('modtype', 'Form of the model', 
           choices = c(
             'Polynomial' = 'poly', 
             'GAM' = 'gam',
@@ -388,7 +388,7 @@ server <- function(input, output, session){
         numericInput('Emean.shift.cold', 'Mean lower shift environmental variable (e.g. temperature is E, a value of -0.5 = 0.5 degrees COLDER)', value = -as.numeric(params$Emean.shift), max=0)
       })
       output$input.modtype <- renderUI({
-        selectInput('modtype', '!!! NOT YET IMPLEMENTED!!! Form of the model', 
+        selectInput('modtype', 'Form of the model', 
           choices = c(
             'Polynomial' = 'poly', 
             'GAM' = 'gam',
@@ -774,20 +774,45 @@ server <- function(input, output, session){
 
     output$maxExpRate <- renderPlot({
 
-      #!# USES GAM
-
       par(mfcol=c(5,1),mar=c(1,4,2,2),omi=c(.6,2.2,.1,2.2))
-
       matplot(PofF.null[,1],PofF.null[,-1],xlab="", ylab="" ,ylim=c(0,1),
       type="l",lwd=3,xaxs="i",yaxs="i",lty=1,col=c("black","blue"))
       legend("topright",legend=c("Density independent","Density dependent"),lwd=2,col=c("black","blue"),bty="n",cex=0.75)
       legend("topleft",legend="Null",bty="n",cex=0.75)
       # print(PofF.null$P.di)
       # print(PofF.null$P.dd)
-      di.intersection <- predict(gam(f~s(P.di),data=PofF.null),newdata=data.frame(P.di=1-input$risk))
+      di.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.di, degree=input$polydegree),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        gam = predict(gam(f~s(P.di),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.di, k=input$knots,bs="ad"), data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        mpi= predict(scam(f~s(P.di, bs="mpi"),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        mpd= predict(scam(f~s(P.di, bs="mpd"),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        cx= predict(scam(f~s(P.di, bs="cx"),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        cv= predict(scam(f~s(P.di, bs="cv"),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        micx= predict(scam(f~s(P.di, bs="micx"),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        micv= predict(scam(f~s(P.di, bs="micv"),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        mdcx= predict(scam(f~s(P.di, bs="mdcx"),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        mdcv= predict(scam(f~s(P.di, bs="mdcv"),data=PofF.null),newdata=data.frame(P.di=1-input$risk)),
+        avg= predict(lm(f - 0*P.di ~ 1, data=PofF.null), newdata=data.frame(P.di=1-input$risk))
+      )
       # print("dd:")
       # print(PofF.null$P.dd)
-      dd.intersection <- predict(gam(f~s(P.dd),data=PofF.null),newdata=data.frame(P.dd=1-input$risk))
+      dd.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.dd, degree=input$polydegree),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        gam = predict(gam(f~s(P.dd),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.dd, k=input$knots,bs="ad"), data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        mpi= predict(scam(f~s(P.dd, bs="mpi"),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        mpd= predict(scam(f~s(P.dd, bs="mpd"),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        cx= predict(scam(f~s(P.dd, bs="cx"),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        cv= predict(scam(f~s(P.dd, bs="cv"),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        micx= predict(scam(f~s(P.dd, bs="micx"),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        micv= predict(scam(f~s(P.dd, bs="micv"),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        mdcx= predict(scam(f~s(P.dd, bs="mdcx"),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        mdcv= predict(scam(f~s(P.dd, bs="mdcv"),data=PofF.null),newdata=data.frame(P.dd=1-input$risk)),
+        avg= predict(lm(f - 0*P.dd ~ 1, data=PofF.null), newdata=data.frame(P.dd=1-input$risk))
+      )
+
+#      dd.intersection <- predict(gam(f~s(P.dd),data=PofF.null),newdata=data.frame(P.dd=1-input$risk))
       rect(0,0,di.intersection,1-input$risk,lty=2,border="darkgrey")
       rect(0,0,dd.intersection,1-input$risk,lty=2,border="darkgrey")
       box()
@@ -795,8 +820,38 @@ server <- function(input, output, session){
       matplot(PofF[,1],PofF[,-1],xlab="", ylab="" ,ylim=c(0,1),
       type="l",lwd=3,xaxs="i",yaxs="i",lty=1,col=c("black","blue"))
       legend("topleft",legend="Mean temperature",bty="n",cex=0.75)
-      di.intersection= predict(gam(f~s(P.di),data=PofF),newdata=data.frame(P.di=1-input$risk))
-      dd.intersection= predict(gam(f~s(P.dd),data=PofF),newdata=data.frame(P.dd=1-input$risk))
+
+      ### di.intersection= predict(gam(f~s(P.di),data=PofF),newdata=data.frame(P.di=1-input$risk))
+      di.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.di, degree=input$polydegree),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        gam = predict(gam(f~s(P.di),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.di, k=input$knots,bs="ad"), data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        mpi= predict(scam(f~s(P.di, bs="mpi"),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        mpd= predict(scam(f~s(P.di, bs="mpd"),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        cx= predict(scam(f~s(P.di, bs="cx"),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        cv= predict(scam(f~s(P.di, bs="cv"),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        micx= predict(scam(f~s(P.di, bs="micx"),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        micv= predict(scam(f~s(P.di, bs="micv"),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        mdcx= predict(scam(f~s(P.di, bs="mdcx"),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        mdcv= predict(scam(f~s(P.di, bs="mdcv"),data=PofF),newdata=data.frame(P.di=1-input$risk)),
+        avg= predict(lm(f - 0*P.di ~ 1, data=PofF), newdata=data.frame(P.di=1-input$risk))
+      )
+
+      ### dd.intersection= predict(gam(f~s(P.dd),data=PofF),newdata=data.frame(P.dd=1-input$risk))
+      dd.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.dd, degree=input$polydegree),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        gam = predict(gam(f~s(P.dd),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.dd, k=input$knots,bs="ad"), data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        mpi= predict(scam(f~s(P.dd, bs="mpi"),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        mpd= predict(scam(f~s(P.dd, bs="mpd"),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        cx= predict(scam(f~s(P.dd, bs="cx"),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        cv= predict(scam(f~s(P.dd, bs="cv"),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        micx= predict(scam(f~s(P.dd, bs="micx"),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        micv= predict(scam(f~s(P.dd, bs="micv"),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        mdcx= predict(scam(f~s(P.dd, bs="mdcx"),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        mdcv= predict(scam(f~s(P.dd, bs="mdcv"),data=PofF),newdata=data.frame(P.dd=1-input$risk)),
+        avg= predict(lm(f - 0*P.dd ~ 1, data=PofF), newdata=data.frame(P.dd=1-input$risk))
+      )
       rect(0,0,di.intersection,1-input$risk,lty=2,border="darkgrey")
       rect(0,0,dd.intersection,1-input$risk,lty=2,border="darkgrey")
       box()
@@ -805,8 +860,37 @@ server <- function(input, output, session){
       matplot(PofF.warm[,1],PofF.warm[,-1],xlab="", ylab= "",ylim=c(0,1),
       type="l",lwd=3,xaxs="i",yaxs="i",lty=1,col=c("black","blue"))
       legend("topleft",legend="0.5 °C warmer",bty="n",cex=0.75)
-      di.intersection= predict(gam(f~s(P.di),data=PofF.warm),newdata=data.frame(P.di=1-input$risk))
-      dd.intersection= predict(gam(f~s(P.dd),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk))
+      ### di.intersection= predict(gam(f~s(P.di),data=PofF.warm),newdata=data.frame(P.di=1-input$risk))
+      di.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.di, degree=input$polydegree),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        gam = predict(gam(f~s(P.di),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.di, k=input$knots,bs="ad"), data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        mpi= predict(scam(f~s(P.di, bs="mpi"),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        mpd= predict(scam(f~s(P.di, bs="mpd"),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        cx= predict(scam(f~s(P.di, bs="cx"),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        cv= predict(scam(f~s(P.di, bs="cv"),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        micx= predict(scam(f~s(P.di, bs="micx"),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        micv= predict(scam(f~s(P.di, bs="micv"),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        mdcx= predict(scam(f~s(P.di, bs="mdcx"),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        mdcv= predict(scam(f~s(P.di, bs="mdcv"),data=PofF.warm),newdata=data.frame(P.di=1-input$risk)),
+        avg= predict(lm(f - 0*P.di ~ 1, data=PofF.warm), newdata=data.frame(P.di=1-input$risk))
+      )
+
+      dd.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.dd, degree=input$polydegree),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        gam = predict(gam(f~s(P.dd),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.dd, k=input$knots,bs="ad"), data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        mpi= predict(scam(f~s(P.dd, bs="mpi"),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        mpd= predict(scam(f~s(P.dd, bs="mpd"),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        cx= predict(scam(f~s(P.dd, bs="cx"),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        cv= predict(scam(f~s(P.dd, bs="cv"),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        micx= predict(scam(f~s(P.dd, bs="micx"),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        micv= predict(scam(f~s(P.dd, bs="micv"),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        mdcx= predict(scam(f~s(P.dd, bs="mdcx"),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        mdcv= predict(scam(f~s(P.dd, bs="mdcv"),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk)),
+        avg= predict(lm(f - 0*P.dd ~ 1, data=PofF.warm), newdata=data.frame(P.dd=1-input$risk))
+      )
+      ### dd.intersection= predict(gam(f~s(P.dd),data=PofF.warm),newdata=data.frame(P.dd=1-input$risk))
       rect(0,0,di.intersection,1-input$risk,lty=2,border="darkgrey")
       rect(0,0,dd.intersection,1-input$risk,lty=2,border="darkgrey")
       box()
@@ -815,8 +899,38 @@ server <- function(input, output, session){
       matplot(PofF.cold[,1],PofF.cold[,-1],xlab="", ylab= "",ylim=c(0,1),
       type="l",lwd=3,xaxs="i",yaxs="i",lty=1,col=c("black","blue"))
       legend("topleft",legend="0.5 °C colder",bty="n",cex=0.75)
-      di.intersection= predict(gam(f~s(P.di),data=PofF.cold),newdata=data.frame(P.di=1-input$risk))
-      dd.intersection= predict(gam(f~s(P.dd),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk))
+      ### di.intersection= predict(gam(f~s(P.di),data=PofF.cold),newdata=data.frame(P.di=1-input$risk))
+      ### dd.intersection= predict(gam(f~s(P.dd),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk))
+      di.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.di, degree=input$polydegree),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        gam = predict(gam(f~s(P.di),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.di, k=input$knots,bs="ad"), data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        mpi= predict(scam(f~s(P.di, bs="mpi"),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        mpd= predict(scam(f~s(P.di, bs="mpd"),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        cx= predict(scam(f~s(P.di, bs="cx"),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        cv= predict(scam(f~s(P.di, bs="cv"),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        micx= predict(scam(f~s(P.di, bs="micx"),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        micv= predict(scam(f~s(P.di, bs="micv"),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        mdcx= predict(scam(f~s(P.di, bs="mdcx"),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        mdcv= predict(scam(f~s(P.di, bs="mdcv"),data=PofF.cold),newdata=data.frame(P.di=1-input$risk)),
+        avg= predict(lm(f - 0*P.di ~ 1, data=PofF.cold), newdata=data.frame(P.di=1-input$risk))
+      )
+
+      dd.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.dd, degree=input$polydegree),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        gam = predict(gam(f~s(P.dd),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.dd, k=input$knots,bs="ad"), data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        mpi= predict(scam(f~s(P.dd, bs="mpi"),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        mpd= predict(scam(f~s(P.dd, bs="mpd"),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        cx= predict(scam(f~s(P.dd, bs="cx"),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        cv= predict(scam(f~s(P.dd, bs="cv"),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        micx= predict(scam(f~s(P.dd, bs="micx"),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        micv= predict(scam(f~s(P.dd, bs="micv"),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        mdcx= predict(scam(f~s(P.dd, bs="mdcx"),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        mdcv= predict(scam(f~s(P.dd, bs="mdcv"),data=PofF.cold),newdata=data.frame(P.dd=1-input$risk)),
+        avg= predict(lm(f - 0*P.dd ~ 1, data=PofF.cold), newdata=data.frame(P.dd=1-input$risk))
+      )
+
       rect(0,0,di.intersection,1-input$risk,lty=2,border="darkgrey")
       rect(0,0,dd.intersection,1-input$risk,lty=2,border="darkgrey")
       box()
@@ -825,8 +939,38 @@ server <- function(input, output, session){
       matplot(PofF.var[,1],PofF.var[,-1],xlab="", ylab= "",ylim=c(0,1),
       type="l",lwd=3,xaxs="i",yaxs="i",lty=1,col=c("black","blue"))
       legend("topleft",legend="sd x 1.5",bty="n",cex=0.75)
-      di.intersection= predict(gam(f~s(P.di),data=PofF.var),newdata=data.frame(P.di=1-input$risk))
-      dd.intersection= predict(gam(f~s(P.dd),data=PofF.var),newdata=data.frame(P.dd=1-input$risk))
+      ### di.intersection= predict(gam(f~s(P.di),data=PofF.var),newdata=data.frame(P.di=1-input$risk))
+      ### dd.intersection= predict(gam(f~s(P.dd),data=PofF.var),newdata=data.frame(P.dd=1-input$risk))
+      di.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.di, degree=input$polydegree),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        gam = predict(gam(f~s(P.di),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.di, k=input$knots,bs="ad"), data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        mpi= predict(scam(f~s(P.di, bs="mpi"),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        mpd= predict(scam(f~s(P.di, bs="mpd"),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        cx= predict(scam(f~s(P.di, bs="cx"),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        cv= predict(scam(f~s(P.di, bs="cv"),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        micx= predict(scam(f~s(P.di, bs="micx"),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        micv= predict(scam(f~s(P.di, bs="micv"),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        mdcx= predict(scam(f~s(P.di, bs="mdcx"),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        mdcv= predict(scam(f~s(P.di, bs="mdcv"),data=PofF.var),newdata=data.frame(P.di=1-input$risk)),
+        avg= predict(lm(f - 0*P.di ~ 1, data=PofF.var), newdata=data.frame(P.di=1-input$risk))
+      )
+
+      dd.intersection <- switch(input$modtype,
+        poly = predict(lm(f~poly(P.dd, degree=input$polydegree),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        gam = predict(gam(f~s(P.dd),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        gam.adaptive=predict( gam(f~s(P.dd, k=input$knots,bs="ad"), data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        mpi= predict(scam(f~s(P.dd, bs="mpi"),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        mpd= predict(scam(f~s(P.dd, bs="mpd"),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        cx= predict(scam(f~s(P.dd, bs="cx"),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        cv= predict(scam(f~s(P.dd, bs="cv"),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        micx= predict(scam(f~s(P.dd, bs="micx"),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        micv= predict(scam(f~s(P.dd, bs="micv"),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        mdcx= predict(scam(f~s(P.dd, bs="mdcx"),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        mdcv= predict(scam(f~s(P.dd, bs="mdcv"),data=PofF.var),newdata=data.frame(P.dd=1-input$risk)),
+        avg= predict(lm(f - 0*P.dd ~ 1, data=PofF.var), newdata=data.frame(P.dd=1-input$risk))
+      )
+
       rect(0,0,di.intersection,1-input$risk,lty=2,border="darkgrey")
       rect(0,0,dd.intersection,1-input$risk,lty=2,border="darkgrey")
       box()
