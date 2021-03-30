@@ -14,10 +14,10 @@ ui <- fluidPage(
     id='tabs',
     tabPanel(title = 'Step 1. Run the P/B~E model',
       sidebarPanel(
-        p('First, `ccca` calculates the annual P/B of the population from a survey index time series. This is then modelled as a function of an `E` variable, either ecological or environmental.'),
-        p('In the following steps, you can specify fishing strategies (using the mean exploitation rate from the dataset) and project climate projections for that fishing scenario.'),
+        h4('Calculate P/B of the population using a survey index time series. This is then modelled as a function of an "E" variable (ecological or environmental).'),
         # h3('Additional datasets here? Upload via CSV? Or only turbot?'),
         hr(), 
+        h4("Select/upload data"),
         checkboxInput('turbot', 'Use the default turbot dataset', value=T),
         p('Or upload a new dataset as a CSV file, making sure the file includes columns "Year", "Catch", "Index" and "E" at least.'),
         # p('Any uploaded dataset must have columns, at least,'),
@@ -39,6 +39,7 @@ ui <- fluidPage(
         numericInput('E.var.inc.extra', 'Additional variance for E (var) exploration', min=0, value=1.5),
         # uiOutput('input.Evar'),
         hr(),
+        h4('Model specifications'),
         uiOutput('input.modtype'), 
         uiOutput('input.poly.degree'),
         uiOutput('input.knots'),        
@@ -65,18 +66,17 @@ ui <- fluidPage(
           )
         ),
         fluidRow(
-          column(10,
-            helpText("If these plots look accurate, proceed to the next step")
-          ),
-          column(2, align="right", 
+          # column(10,
+            helpText("If these plots look accurate, proceed to the next step"),
+          # column(2, align="left", 
             actionButton("next_tab1", "Next", width='100%', class="btn btn-secondary")
-          )
+          # )
         ) 
       )
     ),
     tabPanel(title = 'Step 2. Create E and PB projections',
       sidebarPanel(
-        p('Next, project E values based on the choice of projection parameters, then use this to develop P/B values (based on the P/B vs E fit from Step 1).'),
+        h4('Project E values based on the choice of projection parameters, then use this to develop P/B values (based on the P/B vs E fit from Step 1).'),
         p('(If choosing the turbot example, those values are auto-filled below).'),
         hr(),
         uiOutput('input.proj.years'),
@@ -99,7 +99,7 @@ ui <- fluidPage(
           column(10,
             helpText("If this plot looks accurate, proceed to the next step")
           ),
-          column(2, align="right", 
+          column(2, align="left", 
             actionButton("next_tab2", "Next", width='100%')
           )
         )
@@ -107,9 +107,9 @@ ui <- fluidPage(
     ),
     tabPanel(title = 'Step 3. Generate more complex models with exploitation',
       sidebarPanel(
-        p('Next, project biomass over time given some fishing exploitation (using both density dependent and independent models).'),
-        hr(),
-        p('Define fishing exploitation parameters.'),
+        # h4('Project biomass over time given some fishing exploitation (using both density dependent and independent models).'),
+        # hr(),
+        h4('Define fishing exploitation parameters.'),
         p('(If choosing the turbot example, those values are auto-filled below).'),
         uiOutput('input.moratorium'),
         hr(),
@@ -135,12 +135,12 @@ ui <- fluidPage(
         p("The maximum exploitation rate that will achieve the objective in the specified time period given the E scenario projected."),
         plotOutput("maxExpRate", width='100%'),
         fluidRow(
-          column(10,
-            helpText("If this plot looks accurate, proceed to the next step")
-          ),
-          column(2, align="right", 
+          # column(10,
+            helpText("If this plot looks accurate, proceed to the next step"),
+          #),
+          #column(2, align="left", 
             actionButton("next_tab3", "Next", width='100%')
-          )
+          #)
         )
       )
     ),
@@ -296,8 +296,8 @@ server <- function(input, output, session){
 
       output$input.fs <- renderUI({
         fluidRow(
-          p("Alternative F values to test"),
             column(12,
+            h4("Alternative F values to test"),
             lapply(1:max(1,input$input.fs.length), function(i){
               column(4,
                 numericInput(paste0("f",i),paste0("F[",i,"]"),min=0,max=1,value=(i/input$input.fs.length))
@@ -507,7 +507,14 @@ server <- function(input, output, session){
   output$Eproj.modtype <- renderText({
     paste0("FUTURE FEATURE!!! MODIFY THIS \n\n E is distributed according to a ", input$modtype, " dist")
   })
-  
+
+  observeEvent(input$moratorium, {
+    if(input$moratorium==TRUE){
+      shinyjs::disable("input.fs")
+    } else {
+      shinyjs::enable("input.fs")
+    }
+  })
   ### Reactive ui - not related to default dataset
   # STEP 1
 ###  observeEvent(input$modtype, {
@@ -777,7 +784,8 @@ server <- function(input, output, session){
     })
 
     output$maxExpRate <- renderPlot({
-
+      validate(
+        try({
       par(mfcol=c(5,1),mar=c(1,4,2,2),omi=c(.6,2.2,.1,2.2))
       matplot(PofF.null[,1],PofF.null[,-1],xlab="", ylab="" ,ylim=c(0,1),
       type="l",lwd=3,xaxs="i",yaxs="i",lty=1,col=c("black","blue"))
@@ -981,6 +989,7 @@ server <- function(input, output, session){
 
       mtext(side=1,outer=F,text="Exploitation rate",line=4)
       mtext(outer=T,side=2,text="Probability of being at or above biomass objective in 10 years",line=-1)
+    }), "Error in model fitting: please try changing the number of parameters/F scenarios and try again")
     })
   })
 
